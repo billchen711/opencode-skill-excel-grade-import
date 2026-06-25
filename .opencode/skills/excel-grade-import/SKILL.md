@@ -102,7 +102,7 @@ curl -s http://localhost:5000/api/health
 
 **Windows (PowerShell):**
 ```powershell
-Start-Process -FilePath "dotnet" -ArgumentList "run --urls http://localhost:5000 --project src\GradeImport.Api" -WindowStyle Normal
+Start-Process -WindowStyle Hidden -FilePath "dotnet" -ArgumentList "run --urls http://localhost:5000 --project src\GradeImport.Api"
 Start-Sleep -Seconds 4
 Invoke-RestMethod -Uri "http://localhost:5000/api/health"
 ```
@@ -127,6 +127,14 @@ Unless the user gives a different stack, use:
 - Database: SQLite for local demo (see Demo Database Scope below)
 - Frontend: plain HTML, CSS, and JavaScript, or a small Vite app if the repository already uses one
 - Excel parsing: ExcelDataReader library, supports both `.xls` and `.xlsx` formats
+  - **IMPORTANT for Taiwanese .xls files:** Set fallback encoding to Big5/CP950 to avoid garbled Chinese characters:
+    ```csharp
+    var config = new ExcelReaderConfiguration
+    {
+        FallbackEncoding = System.Text.Encoding.GetEncoding(950)
+    };
+    using var reader = ExcelReaderFactory.CreateReader(stream, config);
+    ```
 - API style: REST endpoints returning JSON
 - Test style: focused unit tests for validation logic and at least one integration-style import test when practical
 
@@ -153,7 +161,7 @@ They should be able to:
 
 ## Required Excel Template
 
-The Excel file must match the school's actual grade sheet format. Based on the reference file `114_2_a0360_11423460317_score17.xls`, the structure is:
+The demo Excel file should follow a school grade sheet style rather than a generic one-row-header spreadsheet. Use fake data only. The expected structure is:
 
 ### File Structure
 
@@ -289,11 +297,25 @@ Use indexes or constraints to prevent duplicate grade rows for the same student 
 
 ## Backend Requirements
 
+**Port:** Use port 5000 for local development. Update `launchSettings.json` if needed:
+```json
+"profiles": {
+    "GradeImport.Api": {
+        "commandName": "Project",
+        "applicationUrl": "http://localhost:5000"
+    }
+}
+```
+
+**Swagger / OpenAPI:**
+- For .NET 8: Use `AddSwaggerGen()` / `UseSwagger()` / `UseSwaggerUI()`
+- For .NET 9+: Use `AddOpenApi()` / `MapOpenApi()` (Swashbuckle is no longer included by default)
+
 Implement these endpoints unless the user asks otherwise:
 
 - `GET /api/health`
   - Returns a simple health status.
-- `POST /api/imports`
+- `POST /api/grade-imports`
   - Accepts multipart form upload.
   - Accepts both `.xls` and `.xlsx` files.
   - Validates file size. Use a conservative limit such as 5 MB for the demo unless specified.
@@ -301,14 +323,14 @@ Implement these endpoints unless the user asks otherwise:
   - Validates each student row.
   - Saves valid rows in a transaction.
   - Returns import summary and row-level errors.
-- `GET /api/imports`
+- `GET /api/grade-imports`
   - Returns all import batches.
-- `GET /api/imports/{id}`
+- `GET /api/grade-imports/{id}`
   - Returns a prior import summary and imported rows.
 - `GET /api/grades`
   - Returns imported grades for demo verification.
 
-The `POST /api/imports` response should include:
+The `POST /api/grade-imports` response should include:
 
 - `batchId`
 - `totalRows`
@@ -327,6 +349,9 @@ Create a simple user interface with:
 
 - Page title: `成績 Excel 匯入`
 - Three tabs: Upload, Import History, Imported Grades
+- **IMPORTANT: Frontend must be served via HTTP** (not file://). Browser security blocks API calls from file:// URLs. Options:
+  - Serve static files from the backend (recommended)
+  - Or use a simple dev server: `npx serve frontend`
 
 ### Tab 1: Upload
 - File upload control (supports drag and drop)
@@ -336,10 +361,10 @@ Create a simple user interface with:
 - Error table with row number, field, message
 
 ### Tab 2: Import History (匯入紀錄)
-- Call `GET /api/imports` to get all import batches
+- Call `GET /api/grade-imports` to get all import batches
 - Display a table with columns: Import Time, File Name, Semester, Course, Total Rows, Success, Failed
 - Each row should be clickable to show batch detail
-- Clicking a row calls `GET /api/imports/{id}` and shows the grades from that batch
+- Clicking a row calls `GET /api/grade-imports/{id}` and shows the grades from that batch
 
 ### Tab 3: Imported Grades (已匯入成績)
 - Call `GET /api/grades` to get all imported grades
