@@ -60,7 +60,6 @@ command -v dotnet && echo ".NET SDK: OK" || echo ".NET SDK: MISSING"
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "Node.js not found. Installing..."
     winget install OpenJS.NodeJS.LTS
-    # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 node --version
@@ -70,7 +69,6 @@ npm --version
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     Write-Host ".NET SDK not found. Installing..."
     winget install Microsoft.DotNet.SDK.10
-    # Refresh PATH
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 dotnet --version
@@ -109,13 +107,6 @@ Start-Sleep -Seconds 4
 Invoke-RestMethod -Uri "http://localhost:5000/api/health"
 ```
 
-**Windows alternative — run in a new PowerShell window:**
-```powershell
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\src\GradeImport.Api'; dotnet run --urls http://localhost:5000"
-Start-Sleep -Seconds 4
-Invoke-RestMethod -Uri "http://localhost:5000/api/health"
-```
-
 **Verification:** After starting the backend, always verify it is running:
 ```bash
 # macOS/Linux
@@ -127,7 +118,6 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/health"
 
 If the health check returns `{"status":"ok"}`, the backend is ready.
 
-
 ## Default Stack
 
 Unless the user gives a different stack, use:
@@ -136,7 +126,7 @@ Unless the user gives a different stack, use:
 - Runtime: .NET 10 (or .NET 8 LTS if preferred)
 - Database: SQLite for local demo (see Demo Database Scope below)
 - Frontend: plain HTML, CSS, and JavaScript, or a small Vite app if the repository already uses one
-- Excel parsing: NPOI library, supports both `.xls` and `.xlsx` formats
+- Excel parsing: ExcelDataReader library, supports both `.xls` and `.xlsx` formats
 - API style: REST endpoints returning JSON
 - Test style: focused unit tests for validation logic and at least one integration-style import test when practical
 
@@ -163,58 +153,139 @@ They should be able to:
 
 ## Required Excel Template
 
-Create or document a sample Excel file with these columns:
+The Excel file must match the school's actual grade sheet format. Based on the reference file `114_2_a0360_11423460317_score17.xls`, the structure is:
 
-- `StudentId` required, text, unique student identifier
-- `StudentName` required, text
-- `CourseCode` required, text
-- `CourseName` required, text
-- `Semester` required, text such as `113-2`
-- `Score` required, number from 0 to 100
+### File Structure
 
-Supported formats: `.xls` (Excel 97-2003) and `.xlsx` (modern Excel)
+The Excel file has a specific layout with metadata rows at the top:
 
-Reject or report rows with:
+| Row | Content | Description |
+|-----|---------|-------------|
+| 0 | 學期資訊 | e.g., "114學年度第二學期 成績評量表" |
+| 1 | 班級資訊 | e.g., "上課班級：大學部土木系一年級甲班" |
+| 2 | 教師資訊 | e.g., "授課教師：李龍盛 (A0360)" |
+| 3 | 課程資訊 | e.g., "課程名稱：(11423460317) 基礎程式設計" |
+| 4 | 評量項目名稱 | Score category names |
+| 5 | 百分比權重 | Score weights |
+| 6 | 欄位標題 | Column headers |
+| 7+ | 學生資料 | Student data rows |
 
-- Missing required values
-- Score outside 0 to 100
-- Non-numeric score
-- Duplicate grade row for the same `StudentId`, `CourseCode`, and `Semester`
-- Unexpected empty rows mixed into the file
+### Column Headers (Row 6)
 
-Do not use real student data in the generated sample. Use fake sample data only.
+| Column | Header | Description |
+|--------|--------|-------------|
+| 0 | 編號 | Row index |
+| 1 | 學號 | Student ID (required) |
+| 2 | 中文姓名 | Student Chinese name (required) |
+| 3 | 學籍狀況 | Enrollment status |
+| 4 | 分數 | Score - 課堂參與討論 |
+| 5 | 分數 | Score - 小考 |
+| 6 | 分數 | Score - 書面報告 |
+| 7 | 分數 | Score - 口頭報告 |
+| 8 | 分數 | Score - 操作實作 |
+| 9 | 分數 | Score - 實習 |
+| 10 | 分數 | Score - 作業習題演練 |
+| 11 | 分數 | Score - 檔案記錄 |
+| 12 | 分數 | Score - 口試 |
+| 13 | 分數 | Score - 其他1 |
+| 14 | 分數 | Score - 其他2 |
+| 15 | 分數 | Score - 其他3 |
+| 16 | 分數 | Score - 其他4 |
+| 17 | 分數 | Score - 其他5 |
+| 18 | 分數 | Score - 其他6 |
+| 19 | 分數 | Score - 期中考 |
+| 20 | 分數 | Score - 期末考 |
+| 21 | 學期成績 | Semester total grade |
+| 22 | 不及格 | Fail flag |
+
+### Score Category Names (Row 4)
+
+The actual score categories are defined in Row 4:
+- Col 4: 課堂參與討論
+- Col 5: 小考
+- Col 6: 書面報告
+- Col 7: 口頭報告
+- Col 8: 操作實作
+- Col 9: 實習
+- Col 10: 作業習題演練
+- Col 11: 檔案記錄
+- Col 12: 口試
+- Col 13: 其他1
+- Col 14: 其他2
+- Col 15: 其他3
+- Col 16: 其他4
+- Col 17: 其他5
+- Col 18: 其他6
+- Col 19: 期中考
+- Col 20: 期末考
+
+### Score Weights (Row 5)
+
+The weights are defined in Row 5:
+- Col 4: 10% (課堂參與討論)
+- Col 10: 30% (作業習題演練)
+- Col 13: 20% (其他1)
+- Col 19: 20% (期中考)
+- Col 20: 20% (期末考)
+
+### Validation Rules
+
+When parsing the Excel file:
+
+1. **Skip metadata rows (0-6)**: These are header information, not student data.
+2. **Required fields for each student row**:
+   - 學號 (StudentId) - required
+   - 中文姓名 (StudentName) - required
+   - 學期成績 (Semester Grade) - required, must be numeric
+3. **Optional fields**:
+   - 學籍狀況 (Enrollment Status)
+   - Individual score columns (4-20)
+   - 不及格 (Fail flag)
+4. **Error messages should be in Chinese**:
+   - Good: `第 7 列缺少學號，請補上後重新上傳。`
+   - Avoid: `ValidationError: StudentId required`
+
+### Metadata Extraction
+
+The system should extract metadata from the header rows:
+- **Semester**: From Row 0 (e.g., "114學年度第二學期")
+- **Class**: From Row 1 (e.g., "大學部土木系一年級甲班")
+- **Teacher**: From Row 2 (e.g., "李龍盛")
+- **Course**: From Row 3 (e.g., "基礎程式設計")
+- **Course Code**: From Row 3 (e.g., "11423460317")
 
 ## Database Design
 
 Implement a simple schema with these entities or equivalent tables:
 
-- `Students`
-  - `Id`
-  - `StudentId`
-  - `Name`
-  - `CreatedAt`
-- `Courses`
-  - `Id`
-  - `CourseCode`
-  - `CourseName`
-  - `CreatedAt`
-- `GradeImportBatches`
+- `ImportBatches`
   - `Id`
   - `FileName`
+  - `Semester`
+  - `ClassName`
+  - `TeacherName`
+  - `CourseName`
+  - `CourseCode`
   - `UploadedAt`
   - `TotalRows`
   - `SuccessRows`
   - `FailedRows`
+- `Students`
+  - `Id`
+  - `StudentId`
+  - `Name`
+  - `EnrollmentStatus`
+  - `CreatedAt`
 - `Grades`
   - `Id`
   - `StudentId`
-  - `CourseId`
-  - `Semester`
-  - `Score`
   - `ImportBatchId`
+  - `Score04` through `Score20` (17 score columns)
+  - `SemesterGrade`
+  - `FailFlag`
   - `CreatedAt`
 
-Use indexes or constraints to prevent duplicate grade rows for the same student, course, and semester.
+Use indexes or constraints to prevent duplicate grade rows for the same student and import batch.
 
 ## Backend Requirements
 
@@ -222,20 +293,22 @@ Implement these endpoints unless the user asks otherwise:
 
 - `GET /api/health`
   - Returns a simple health status.
-- `POST /api/grade-imports`
+- `POST /api/imports`
   - Accepts multipart form upload.
-  - Accepts both `.xls` (Excel 97-2003) and `.xlsx` files.
+  - Accepts both `.xls` and `.xlsx` files.
   - Validates file size. Use a conservative limit such as 5 MB for the demo unless specified.
-  - Parses rows.
-  - Validates each row.
+  - Parses rows (skip first 7 rows as headers).
+  - Validates each student row.
   - Saves valid rows in a transaction.
   - Returns import summary and row-level errors.
-- `GET /api/grade-imports/{id}`
+- `GET /api/imports`
+  - Returns all import batches.
+- `GET /api/imports/{id}`
   - Returns a prior import summary and imported rows.
 - `GET /api/grades`
   - Returns imported grades for demo verification.
 
-The `POST /api/grade-imports` response should include:
+The `POST /api/imports` response should include:
 
 - `batchId`
 - `totalRows`
@@ -245,7 +318,7 @@ The `POST /api/grade-imports` response should include:
 
 Example error message style:
 
-- Good: `第 5 列缺少學號，請補上後重新上傳。`
+- Good: `第 7 列缺少學號，請補上後重新上傳。`
 - Avoid: `ValidationError: StudentId required`
 
 ## Frontend Requirements
@@ -253,12 +326,25 @@ Example error message style:
 Create a simple user interface with:
 
 - Page title: `成績 Excel 匯入`
-- File upload control
+- Three tabs: Upload, Import History, Imported Grades
+
+### Tab 1: Upload
+- File upload control (supports drag and drop)
 - Upload button
 - Loading state while uploading
 - Import summary after upload
 - Error table with row number, field, message
-- Imported grade preview table
+
+### Tab 2: Import History (匯入紀錄)
+- Call `GET /api/imports` to get all import batches
+- Display a table with columns: Import Time, File Name, Semester, Course, Total Rows, Success, Failed
+- Each row should be clickable to show batch detail
+- Clicking a row calls `GET /api/imports/{id}` and shows the grades from that batch
+
+### Tab 3: Imported Grades (已匯入成績)
+- Call `GET /api/grades` to get all imported grades
+- Display a table with columns: 學號, 中文姓名, 學期成績, 不及格
+- Show "尚無匯入成績" if empty
 
 The UI should be plain and work-focused. Avoid marketing copy. Do not make the user read technical instructions before uploading.
 
@@ -321,7 +407,6 @@ Do not call the work complete until these checks pass or are explicitly document
 - Build command succeeds.
 - Tests pass, if tests were created.
 
-
 ## Suggested First Prompt
 
 Use this prompt in OpenCode after this skill is available:
@@ -331,27 +416,14 @@ Please use the excel-grade-import skill. Read the skill content first, then prod
 
 I need a school staff Excel grade import demo:
 - Backend: C# ASP.NET Core Web API.
-- Frontend: simple JavaScript page.
+- Frontend: simple JavaScript page with 3 tabs (Upload, Import History, Imported Grades).
 - Database: SQLite.
-- Upload .xlsx grade files, validate rows, import to database, show success and error results.
+- The Excel file has a specific format with 7 header rows (semester, class, teacher, course info, score categories, weights, column headers).
+- Student data starts from Row 7.
+- Required fields: 學號 (StudentId), 中文姓名 (StudentName), 學期成績 (Semester Grade).
+- 17 score columns (Col 4-20) for different assessment types.
+- Use ExcelDataReader to support both .xls and .xlsx formats.
 - Use fake data only, no real student records.
 
 List the files, API endpoints, tables, validation rules, run and test commands. Wait for my approval before implementation.
 ```
-
-## Additional UI Features
-
-The frontend should include two additional tabs (besides the upload tab):
-
-### Tab: Import History (匯入紀錄)
-
-- Call `GET /api/imports` to get all import batches
-- Display a table with columns: Import Time, File Name, Total Rows, Success, Failed
-- Each row should be clickable to show batch detail
-- Clicking a row calls `GET /api/imports/{id}` and shows the grades from that batch
-
-### Tab: Imported Grades (已匯入成績)
-
-- Call `GET /api/grades` to get all imported grades
-- Display a table with columns: StudentId, StudentName, CourseCode, CourseName, Semester, Score
-- Show "No grades yet" if empty
