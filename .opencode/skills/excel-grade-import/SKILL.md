@@ -333,7 +333,7 @@ I need a school staff Excel grade import demo:
 - Backend: C# ASP.NET Core Web API.
 - Frontend: simple JavaScript page.
 - Database: SQLite.
-- Upload .xlsx grade files, validate rows, import to database, show success and error results.
+- Upload .xls or .xlsx grade files, validate rows, import to database, show success and error results.
 - Use fake data only, no real student records.
 
 List the files, API endpoints, tables, validation rules, run and test commands. Wait for my approval before implementation.
