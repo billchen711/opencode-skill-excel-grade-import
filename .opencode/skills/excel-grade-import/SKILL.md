@@ -136,7 +136,7 @@ Unless the user gives a different stack, use:
 - Runtime: .NET 10 (or .NET 8 LTS if preferred)
 - Database: SQLite for local demo (see Demo Database Scope below)
 - Frontend: plain HTML, CSS, and JavaScript, or a small Vite app if the repository already uses one
-- Excel parsing: a maintained .NET package that can read `.xlsx` files
+- Excel parsing: NPOI library, supports both `.xls` and `.xlsx` formats
 - API style: REST endpoints returning JSON
 - Test style: focused unit tests for validation logic and at least one integration-style import test when practical
 
@@ -171,6 +171,8 @@ Create or document a sample Excel file with these columns:
 - `CourseName` required, text
 - `Semester` required, text such as `113-2`
 - `Score` required, number from 0 to 100
+
+Supported formats: `.xls` (Excel 97-2003) and `.xlsx` (modern Excel)
 
 Reject or report rows with:
 
@@ -222,7 +224,7 @@ Implement these endpoints unless the user asks otherwise:
   - Returns a simple health status.
 - `POST /api/grade-imports`
   - Accepts multipart form upload.
-  - Accepts only `.xlsx` files by default.
+  - Accepts both `.xls` (Excel 97-2003) and `.xlsx` files.
   - Validates file size. Use a conservative limit such as 5 MB for the demo unless specified.
   - Parses rows.
   - Validates each row.
