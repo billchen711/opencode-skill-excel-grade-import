@@ -333,8 +333,25 @@ I need a school staff Excel grade import demo:
 - Backend: C# ASP.NET Core Web API.
 - Frontend: simple JavaScript page.
 - Database: SQLite.
-- Upload .xls or .xlsx grade files, validate rows, import to database, show success and error results.
+- Upload .xlsx grade files, validate rows, import to database, show success and error results.
 - Use fake data only, no real student records.
 
 List the files, API endpoints, tables, validation rules, run and test commands. Wait for my approval before implementation.
 ```
+
+## Additional UI Features
+
+The frontend should include two additional tabs (besides the upload tab):
+
+### Tab: Import History (匯入紀錄)
+
+- Call `GET /api/imports` to get all import batches
+- Display a table with columns: Import Time, File Name, Total Rows, Success, Failed
+- Each row should be clickable to show batch detail
+- Clicking a row calls `GET /api/imports/{id}` and shows the grades from that batch
+
+### Tab: Imported Grades (已匯入成績)
+
+- Call `GET /api/grades` to get all imported grades
+- Display a table with columns: StudentId, StudentName, CourseCode, CourseName, Semester, Score
+- Show "No grades yet" if empty
