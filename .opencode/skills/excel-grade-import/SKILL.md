@@ -452,3 +452,63 @@ I need a school staff Excel grade import demo:
 
 List the files, API endpoints, tables, validation rules, run and test commands. Wait for my approval before implementation.
 ```
+
+## Known Issues and Solutions
+
+### Issue 1: Foreign Key Constraint Failed
+
+**Symptom:** Upload fails with error containing "FOREIGN KEY constraint failed"
+
+**Cause:** `Grade.ImportBatchId` references `batch.Id`, but the batch hasn't been saved to the database yet (Id = 0).
+
+**Solution:** Call `SaveChangesAsync()` immediately after creating the batch to get the real Id:
+```csharp
+var batch = new ImportBatch { ... };
+_db.ImportBatches.Add(batch);
+await _db.SaveChangesAsync();  // Get real Id before processing grades
+// Now process grades with batch.Id
+```
+
+### Issue 2: Chinese Characters Show as Garbled Text in .xls Files
+
+**Symptom:** Metadata from .xls files shows garbled text like `114¾Ç¦~«×²Ä¤G¾Ç´Á` instead of `114學年度第二學期`
+
+**Cause:** Taiwanese school .xls files use Big5 encoding (CodePage 950). ExcelDataReader reads them as Latin-1, causing character corruption. The `FallbackEncoding` setting does NOT fix this because the file may already have a CodePage record.
+
+**Analysis pattern:**
+- `¾Ç` = Latin-1 bytes `BE C7` = Big5 encoding for `學`
+- `¦~` = Latin-1 bytes `7E` = Big5 encoding for `年`
+
+**Solution — Manual re-decoding:**
+```csharp
+private string FixEncoding(string text)
+{
+    if (string.IsNullOrEmpty(text)) return text;
+    
+    // If text already has CJK characters, it's fine (e.g., .xlsx uses UTF-8)
+    if (text.Any(c => c >= '\u4e00' && c <= '\u9fff'))
+        return text;
+    
+    // Convert garbled Latin-1 characters back to bytes, then re-decode as Big5
+    try
+    {
+        var latin1 = Encoding.GetEncoding(28591);  // Latin-1
+        var big5 = Encoding.GetEncoding(950);       // Big5/CP950
+        var bytes = latin1.GetBytes(text);
+        return big5.GetString(bytes);
+    }
+    catch
+    {
+        return text;  // If decoding fails, return original
+    }
+}
+```
+
+**Apply to:** All string values read from .xls cells (StudentId, Name, Enrollment Status, metadata, etc.)
+
+**Why this works:**
+- Latin-1 code points U+0000-U+00FF map 1:1 to bytes 0x00-0xFF
+- Big5 uses these same byte ranges for Chinese characters
+- So we can "undo" the Latin-1 misinterpretation by converting back to bytes, then correctly decoding as Big5
+
+**Note:** .xlsx files use UTF-8, so they won't have this issue. The `FixEncoding` function safely skips them.
