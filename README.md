@@ -155,7 +155,9 @@ code .
 
 **圖 5：** OpenCode 開始讀取 GitHub 專案與 `.opencode/skills/excel-grade-import/SKILL.md`。這張圖可以證明 coding agent 的輸入來源不是口頭描述，而是已經整理好的規格檔。
 
-> 展示時可補充：OpenCode 產生實作計畫的畫面，建議檔名為 `screenshots/windows-opencode-skill-tutorial/03-agent-plan/02-agent-plan-output.png`。
+![OpenCode 產生實作計畫](screenshots/windows-opencode-skill-tutorial/03-agent-plan/02-agent-plan-output.png)
+
+**圖 6：** OpenCode 依照 `SKILL.md` 內容產生實作計畫，列出預期的專案結構、後端 API、資料模型與前端頁面安排。這一步是整個 workflow 的關鍵，因為它能先確認 agent 理解的方向是否正確。
 
 ### Step 3：依照計畫產生範例專案
 
@@ -176,7 +178,7 @@ code .
 
 ![VS Code 專案結構](screenshots/01-vscode-project.png)
 
-> 展示時可補充：OpenCode 產生檔案或完成專案結構的畫面。
+**圖 7：** 依照實作計畫產生出的專案結構，包含 `src/GradeImport.Api` 後端專案、前端靜態檔案與測試專案。
 
 ### Step 4：啟動後端 API
 
@@ -194,6 +196,8 @@ http://localhost:5000/api/health
 ```
 
 ![Health API 回應](screenshots/04-health-api.png)
+
+**圖 8：** 後端 API 啟動後，可透過 `http://localhost:5000/api/health` 確認服務正常運作。
 
 ### Step 5：開啟前端上傳頁面
 
@@ -220,7 +224,9 @@ http://localhost:5173
 
 畫面應該會看到「成績 Excel 匯入」、檔案選擇按鈕、上傳按鈕，以及匯入結果區塊。
 
-> 展示時可補充：前端上傳頁面。
+![前端上傳頁面](screenshots/windows-opencode-skill-tutorial/06-frontend-upload/01-upload-page.png)
+
+**圖 9：** 前端上傳頁面已可正常開啟，並且使用 HTTP 位址呼叫後端 API。畫面中可以看到頁籤、拖放上傳區與上傳按鈕。
 
 ### Step 6：上傳正確 Excel
 
@@ -243,31 +249,35 @@ sample-data/valid-grades.xlsx
 - 失敗筆數為 0。
 - 匯入後可在畫面或 API 中看到成績資料。
 
-> 展示時可補充：正確 Excel 匯入成功結果。
+![正確 Excel 匯入成功](screenshots/windows-opencode-skill-tutorial/07-results/01-success-import.png)
 
-### Step 7：上傳錯誤 Excel
+**圖 10：** 正確 Excel 上傳後，系統會顯示總筆數、成功筆數與失敗筆數。這張圖中的結果為總筆數 50、成功 50、失敗 0，代表匯入流程成功完成。
 
-再使用包含錯誤資料的 Excel 測試，例如分數超過 100、缺少學號、或同一位學生同一門課重複匯入。
+### Step 7：查看匯入紀錄
 
-預期結果：
+匯入完成後，可以切換到「匯入紀錄」頁籤，查看每一次上傳的檔名、學期、課程、成功筆數與失敗筆數。
 
-- 系統不會只顯示程式錯誤。
-- 畫面會列出第幾列、哪個欄位、錯誤原因。
-- 錯誤訊息要讓一般教職員看得懂。
+![匯入紀錄頁面](screenshots/windows-opencode-skill-tutorial/07-results/02-import-history.png)
 
-> 展示時可補充：錯誤明細表格。
+**圖 11：** 匯入紀錄頁面會保留每次匯入的結果，方便工程師或使用者回頭檢查匯入批次是否成功。
 
-### Step 8：查看本機資料庫結果
+如果要展示錯誤情境，可以另外再上傳一份包含欄位缺漏、重複資料或格式錯誤的 Excel，系統應顯示逐列錯誤訊息，而不是只顯示程式例外。
 
-若要確認資料確實寫入 SQLite，可以用畫面上的「已匯入成績」或 `GET /api/grades` 檢查。若電腦有安裝 `sqlite3` 指令，也可以用下列方式查看：
+### Step 8：查看已匯入成績
+
+切換到「已匯入成績」頁籤後，可以直接查看目前資料庫中的成績資料。
+
+![已匯入成績頁面](screenshots/windows-opencode-skill-tutorial/07-results/03-imported-grades-preview.png)
+
+**圖 12：** 已匯入成績頁面會列出學號、中文姓名、學期成績與是否不及格。這張圖可以作為資料已經成功寫入後端與資料庫的證明。
+
+若要進一步確認資料確實寫入 SQLite，也可以用 `GET /api/grades` 或 `sqlite3` 指令查看：
 
 ```bash
 sqlite3 src/GradeImport.Api/grades.db "SELECT * FROM Grades;"
 ```
 
 這一步只是 demo 驗證方式，不是必要步驟。正式系統通常不會讓一般使用者直接查資料庫，而是透過後端 API 或管理介面查看資料。
-
-> 展示時可補充：資料庫查詢結果。
 
 ---
 
@@ -282,22 +292,5 @@ sqlite3 src/GradeImport.Api/grades.db "SELECT * FROM Grades;"
 | clone 下來沒有 `src/` 資料夾 | 正常。後端與前端會在 Step 3 由 OpenCode 依照 SKILL.md 規格產生。 |
 | 後端啟動失敗或 port 被占用 | 可改用其他 port，例如 `dotnet run --urls "http://localhost:5001"`，並同步調整前端呼叫的 API 位址。 |
 | OpenCode 直接開始改檔案 | 停止目前動作，重新要求它「只產生實作計畫，不要修改或建立檔案」。 |
-
----
-
-## 展示時建議補充的截圖
-
-後續如果要整理成完整 HackMD 報告，建議至少補上以下畫面：
-
-| 順序 | 建議檔名 | 目的 |
-|------|----------|------|
-| 1 | `03-agent-plan/02-agent-plan-output.png` | 證明 OpenCode 有先產生實作計畫。 |
-| 2 | `04-agent-build/01-agent-generating-files.png` | 顯示 OpenCode 依照計畫產生專案檔案。 |
-| 3 | `04-agent-build/02-generated-project-tree.png` | 顯示產生後的前端、後端、資料夾結構。 |
-| 4 | `05-run-backend/01-dotnet-run-success.png` | 顯示後端 API 成功啟動。 |
-| 5 | `06-frontend-upload/01-upload-page.png` | 顯示一般教職員會使用的上傳頁面。 |
-| 6 | `07-results/01-success-import.png` | 顯示正確 Excel 匯入成功。 |
-| 7 | `07-results/02-error-import.png` | 顯示錯誤 Excel 的逐列錯誤訊息。 |
-| 8 | `07-results/03-imported-grades-preview.png` | 顯示匯入後資料可被查詢或預覽。 |
 
 ---
