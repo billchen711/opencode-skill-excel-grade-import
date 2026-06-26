@@ -14,13 +14,11 @@
 
 本範例使用 SQLite 作為本機 demo 資料庫。若要接到學校正式資料庫，需要由工程師依照校內既有 API、資料庫類型與資安規範另外串接。
 
-> 注意：這個 GitHub repo 目前主要放的是 `SKILL.md`、`AGENTS.md` 和操作手冊。前端、後端與資料庫專案會在後面的步驟中由 OpenCode / MimoCode 依照規格產生；剛 clone 下來時如果還沒有 `src/GradeImport.Api` 之類的資料夾，這是正常的。
-
 ---
 
 ## 這份文件的用途
 
-了解如何用 `SKILL.md` 指引 OpenCode / MimoCode 產生 prototype，並判斷後續需要補強的部分。
+了解如何用 `SKILL.md` 指引 OpenCode 或是其他coding agent 產生 prototype，並判斷後續需要補強的部分。
 
 ---
 
@@ -34,7 +32,7 @@
 | VS Code | 開啟專案與編輯檔案 | https://code.visualstudio.com/ |
 | Node.js + npm | 安裝與執行 OpenCode 需要用到 | https://nodejs.org/ |
 | .NET SDK | 執行 C# ASP.NET Core 後端 | https://dotnet.microsoft.com/download |
-| OpenCode 或 MimoCode | 讓 coding agent 讀取規格並產生範例專案 | 依各工具官方文件安裝 |
+| OpenCode  | 讓 coding agent 讀取規格並產生範例專案 | 依各工具官方文件安裝 |
 
 常見安裝指令：
 
@@ -65,7 +63,6 @@ dotnet --version
 opencode --version
 ```
 
-如果使用的是 MimoCode，請依照 MimoCode 的安裝方式確認工具可以在 VS Code 中正常開啟。詳細安裝步驟可參考 `docs/environment-setup.zh-TW.md`。
 
 ---
 
@@ -79,15 +76,15 @@ cd opencode-skill-excel-grade-import
 code .
 ```
 
-開啟 VS Code 後，再啟動 OpenCode 或 MimoCode。若是使用 OpenCode，可以從 VS Code 側邊欄開啟 OpenCode 面板；若沒有使用擴充套件，也可以在 VS Code 終端機中執行 `opencode`。
+開啟 VS Code 後，再啟動 OpenCode。若是使用 OpenCode，可以從 VS Code 側邊欄開啟 OpenCode 面板；若沒有使用擴充套件，也可以在 VS Code 終端機中執行 `opencode`。
 
-後續操作會讓 coding agent 讀取專案內的 `AGENTS.md` 和 `.opencode/skills/excel-grade-import/SKILL.md`。開始前請先確認 OpenCode / MimoCode 已經可以正常對話，且模型額度或登入狀態可用。
+後續操作會讓 coding agent 讀取專案內的 `.opencode/skills/excel-grade-import/SKILL.md`。開始前請先確認 OpenCode 已經可以正常對話，且模型額度或登入狀態可用。
 
 ---
 
 ## Windows 環境截圖紀錄
 
-以下是這次在 Windows 上實際操作時保留下來的畫面，可放在報告中作為操作證明。
+以下是這次在 Windows 上實際操作時保留下來的畫面。
 
 ![Windows 建立 demo 資料夾](screenshots/windows-opencode-skill-tutorial/01-environment/01-windows-desktop-project-folder.png)
 
@@ -136,7 +133,7 @@ code .
 可使用的 prompt：
 
 ```text
-請先閱讀 AGENTS.md 和 .opencode/skills/excel-grade-import/SKILL.md。
+請先閱讀 .opencode/skills/excel-grade-import/SKILL.md。
 
 請使用 excel-grade-import skill，先只產生實作計畫，不要修改或建立任何檔案。
 
@@ -200,10 +197,25 @@ http://localhost:5000/api/health
 
 ### Step 5：開啟前端上傳頁面
 
-用瀏覽器開啟前端頁面，例如：
+前端建議用 HTTP 方式開啟，不要直接用 `file://` 開 `index.html`，否則瀏覽器可能會擋住前端呼叫後端 API。
+
+如果 OpenCode 產生的後端已經負責提供前端靜態檔案，可以直接開：
 
 ```text
-src/grade-import-frontend/index.html
+http://localhost:5000
+```
+
+如果前端是獨立資料夾，可以另外開一個終端機啟動簡單的靜態伺服器：
+
+```bash
+cd src/grade-import-frontend
+npx serve . -l 5173
+```
+
+接著用瀏覽器開啟：
+
+```text
+http://localhost:5173
 ```
 
 畫面應該會看到「成績 Excel 匯入」、檔案選擇按鈕、上傳按鈕，以及匯入結果區塊。
@@ -267,6 +279,7 @@ sqlite3 src/GradeImport.Api/grades.db "SELECT * FROM Grades;"
 | `node` 或 `npm` 找不到 | 安裝 Node.js LTS，重新開啟終端機後執行 `node --version` 和 `npm --version`。 |
 | `opencode` 找不到 | 先執行 `npm i -g opencode-ai`，再重新開啟終端機確認 `opencode --version`。 |
 | `dotnet` 找不到 | 安裝 .NET SDK，重新開啟終端機後執行 `dotnet --version`。 |
+| clone 下來沒有 `src/` 資料夾 | 正常。後端與前端會在 Step 3 由 OpenCode 依照 SKILL.md 規格產生。 |
 | 後端啟動失敗或 port 被占用 | 可改用其他 port，例如 `dotnet run --urls "http://localhost:5001"`，並同步調整前端呼叫的 API 位址。 |
 | OpenCode 直接開始改檔案 | 停止目前動作，重新要求它「只產生實作計畫，不要修改或建立檔案」。 |
 
@@ -288,11 +301,3 @@ sqlite3 src/GradeImport.Api/grades.db "SELECT * FROM Grades;"
 | 8 | `07-results/03-imported-grades-preview.png` | 顯示匯入後資料可被查詢或預覽。 |
 
 ---
-
-## Demo 範圍說明
-
-這份 demo 只用假資料，不使用真實學生資料。
-
-目前版本的資料庫是本機 SQLite，目的是讓展示流程可以在單機上跑起來。正式環境若要接學校資料庫，仍需要工程師補上登入權限、資料庫連線、稽核紀錄、備份機制、檔案掃描與部署設定。
-
-因此，這份手冊要展示的是「如何用規格檔引導 coding agent 產生可檢查的 prototype」，不是宣稱 coding agent 可以直接取代正式系統開發。

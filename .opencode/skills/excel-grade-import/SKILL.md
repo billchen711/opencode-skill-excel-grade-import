@@ -87,7 +87,7 @@ if (Get-Command npm -ErrorAction SilentlyContinue) { Write-Host "npm: OK" } else
 if (Get-Command dotnet -ErrorAction SilentlyContinue) { Write-Host ".NET SDK: OK" } else { Write-Host ".NET SDK: MISSING" }
 ```
 
-If any tool is still missing after installation, refer to `docs/environment-setup.zh-TW.md` for manual installation instructions.
+If any tool is still missing after installation, install it manually from the official website or package manager for the current platform before continuing.
 
 ### Important: Running the Backend Server
 
